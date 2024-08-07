@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+  labels:
+    app: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:  # This is the label used to link the deployment to the pod template
+      app: mongo  
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:4.4.18
+        resources:
+          limits:
+            memory: "0.5G"
+            cpu: "0.5"
+        ports:
+        - containerPort: 27017
+        env:  # These are he env variables that mongoDB container expects
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef: # The values are extracted from mongo-secret
+              name: mongo-secret
+              key: mongo-user
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef: # The values are extracted from mongo-secret
+              name: mongo-secret
+              key: mongo-password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-service # This is the service used by the webapp pod to link to the mongo pod
+spec:
+  selector: # This is used to select the pod to which do we want to forward requests, in our case "app: mongo". The webapp request will be forwaded to the pod with
+            # app: mongo label
+    app: mongo
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017

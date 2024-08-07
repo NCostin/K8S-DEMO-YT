@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-deployment
+  labels:
+    app: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+      - name: webapp
+        image: nanajanashia/k8s-demo-app:v1.0
+        resources:
+          limits:
+            memory: "0.5G"
+            cpu: "0.5"
+        ports:
+        - containerPort: 3000
+        env:  # These are he env variables that webapp container expects
+        - name: USER_NAME
+          valueFrom:
+            secretKeyRef: # The values are extracted from mongo-secret
+              name: mongo-secret
+              key: mongo-user
+        - name: USER_PWD
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret  # The values are extracted from mongo-secret
+              key: mongo-password
+        - name: DB_URL
+          valueFrom:
+            configMapKeyRef:  # The value is extracted from mongo-config (the url is a endpoint needed by the webapp to access)
+              name: mongo-config
+              key: mongo-url
+            
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service  # This is the service used to expose the webapp pod externally
+spec:
+  type: NodePort
+  selector: # This is used to select the pod which do we want to expose
+    app: webapp 
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      nodePort: 30100 # Exposes the Service on each Node IP at a static port
